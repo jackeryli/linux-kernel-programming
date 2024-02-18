@@ -81,6 +81,9 @@ const struct file_operations fops = {
     owner:THIS_MODULE
 };
 
+/*
+ * ref: https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html
+ */
 static int __init rootkit_init(void)
 {
 	int ret;
