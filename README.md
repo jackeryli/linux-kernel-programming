@@ -15,8 +15,9 @@ Follow this [guide](installation.md) to prepare environment.
 
 ## Part 2: Rootkit
 
-- Hide rootkit from `lsmod`
+- Hide/Unhide rootkit from `lsmod`
+- Hook syscalls `execve` and `reboot`
 
 ## Reference
 
-This project is modified by CSIE5374. I tried to run experiments on ubuntu 22.04.
+This project is modified by CSIE5374. I tried to run experiments on ubuntu 22.04 and kernel 6.5.
