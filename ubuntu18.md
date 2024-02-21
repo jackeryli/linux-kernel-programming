@@ -4,9 +4,9 @@
 
 ### Build
 
-#### If meet lex bug
+#### If meet lex error
 
 ```sh
-# scripts/dtc/dtc-lexer.l:36
+# scripts/dtc/dtc-lexer.l:26
 +extern YYLTYPE yylloc;
 ```

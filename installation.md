@@ -60,10 +60,10 @@ First download ubuntu 22.04 file system binaries:
 wget https://cloud-images.ubuntu.com/releases/22.04/release-20221101.1/ubuntu-22.04-server-cloudimg-arm64-root.tar.xz
 ```
 
-Run `build_qemu_img.sh` to create virtual disk image and mount on `/mnt`.
+Create virtual disk image and mount on `/mnt`.
 
 ```sh
-sh build_qemu_img.sh
+make qemu-img
 ```
 
 Modify `/mnt/etc/passwd` to disable root password
@@ -81,7 +81,7 @@ sudo umount /mnt
 ### Run Linux VM
 
 ```sh
-./run_vm.sh -k $PATH_TO_IMAGE -i $PATH_TO_cloud.img
+make qemu
 ```
 
 Your Linux image is here:
@@ -93,7 +93,7 @@ $PATH_TO_YOUR_LINUX/arch/arm64/boot/Image
 ## Share files between qemu and host
 
 ```sh
-$ ./run_vm.sh -k ../linux/arch/arm64/boot/Image -i cloud.img
+$ make qemu
 ...
 
 Ubuntu 22.04 LTS
