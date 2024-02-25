@@ -12,11 +12,19 @@ Follow this [guide](installation.md) to prepare environment.
 ## Part 1: Add new system call and write a shell
 
 - Add new syscall `getcpu`
+- Write a simple shell
 
 ## Part 2: Rootkit
 
 - Hide/Unhide rootkit from `lsmod`
 - Hook syscalls `execve` and `reboot`
+
+## Part 3: Transfer data between user and kernal
+
+- Study `copy_to_user` and `copy_from_user`
+
+## Part 4: procfs
+
 
 ## Reference
 
