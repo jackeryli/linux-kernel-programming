@@ -8,6 +8,7 @@
 #include <linux/err.h>		/* IS_ERR */
 #include <linux/slab.h>		/* kmalloc */
 #include <linux/uaccess.h>	/* copy_to_user */
+#include <linux/mutex.h>	/* mutex */
 
 #define KBUFSIZE 1024
 
@@ -15,6 +16,7 @@ dev_t dev = 0;
 static struct cdev *kernel_cdev;
 static struct class *dev_class;
 char* kernel_buf;
+struct mutex jackdriver_mutex;
 
 /******* functions ********/
 static int __init jackdriver_init(void);
@@ -52,13 +54,24 @@ static ssize_t jackdriver_read(struct file *filp, char __user *buf, size_t len,l
 
 static ssize_t jackdriver_write(struct file *filp, const char *buf, size_t len, loff_t * off)
 {	
+	ssize_t ret = 0;
+
+	mutex_lock(&jackdriver_mutex);
+	
+	memset(kernel_buf, 0, KBUFSIZE);
+	
 	if(copy_from_user(kernel_buf, buf, len))
 	{
 		pr_err("jackdriver: write error\n");
+		ret = -EFAULT;
+	} else {
+		pr_info("jackdriver: write finished\n");
+		ret = len;
 	}
-
-	pr_info("jackdriver: write finished\n");
-	return len;
+	
+	mutex_unlock(&jackdriver_mutex);
+	
+	return ret;
 }
 
 static int jackdriver_release(struct inode *inode, struct file *filp)
@@ -91,6 +104,8 @@ static int __init jackdriver_init(void)
 		pr_info("jackdriver: unable to allocate cdev\n");
 		goto error;
 	}
+
+	mutex_init(&jackdriver_mutex);
 
 	/* Allocate Kernel Buffer */
 	kernel_buf = kmalloc(KBUFSIZE, GFP_KERNEL);
