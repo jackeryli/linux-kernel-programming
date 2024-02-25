@@ -43,21 +43,28 @@ static int jackdriver_open(struct inode *inode, struct file *filp)
 
 static ssize_t jackdriver_read(struct file *filp, char __user *buf, size_t len,loff_t * off)
 {
+	ssize_t ret = 0;
+
 	if(copy_to_user(buf, kernel_buf, KBUFSIZE))
 	{
 		pr_err("jackdriver: read error\n");
+		ret = -EFAULT;
+	} else {
+		pr_info("jackdriver: read finished\n");
+		ret = KBUFSIZE;
 	}
-	pr_info("jackdriver: kernel_buf=%s\n", kernel_buf);
-	pr_info("jackdriver: read finished\n");
-	return KBUFSIZE;
+	
+	return ret;
 }
 
 static ssize_t jackdriver_write(struct file *filp, const char *buf, size_t len, loff_t * off)
 {	
 	ssize_t ret = 0;
 
+	/* Prevent threads writing to same buf at the same time */
 	mutex_lock(&jackdriver_mutex);
 	
+	/* Clear kernel_buf to zero */
 	memset(kernel_buf, 0, KBUFSIZE);
 	
 	if(copy_from_user(kernel_buf, buf, len))

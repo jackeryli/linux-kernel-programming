@@ -21,7 +21,9 @@ Follow this [guide](installation.md) to prepare environment.
 
 ## Part 3: Transfer data between user and kernal
 
-- Study `copy_to_user` and `copy_from_user`
+- Trasfer data with `copy_to_user` and `copy_from_user`
+- Use `kmalloc` to allocate memory at kernel
+- Memory should be protected by `mutex` 
 
 ## Part 4: procfs
 
