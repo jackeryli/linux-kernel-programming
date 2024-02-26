@@ -1,6 +1,6 @@
 # myfs
 
-- A simple file system on memory
+- A simple in-memory file system
 
 ## Useful Library
 

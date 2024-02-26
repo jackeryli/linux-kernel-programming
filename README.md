@@ -28,6 +28,10 @@ Follow this [guide](installation.md) to prepare environment.
 
 ## Part 4: procfs
 
+## Part 5: myfs
+
+- A simple in-mermoy file system
+
 
 ## Reference
 
