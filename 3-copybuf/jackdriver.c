@@ -133,7 +133,7 @@ error:
 
 static void __exit jackdriver_exit(void)
 {
-	mutex_destory(&jackdriver_mutex);
+	mutex_destroy(&jackdriver_mutex);
 	device_destroy(dev_class, dev);
 	class_destroy(dev_class);
 	cdev_del(kernel_cdev);
