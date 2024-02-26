@@ -298,6 +298,8 @@ static int __init rootkit_init(void)
 
 static void __exit rootkit_exit(void)
 {
+	mutex_destory(&hide_mutex);
+	mutex_destory(&hook_mutex);
 	rootkit_unhook();
 	pr_info("rootkit: removed\n");
 	cdev_del(kernel_cdev);
