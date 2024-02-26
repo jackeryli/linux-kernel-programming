@@ -104,3 +104,9 @@ ubuntu login: root
 
 root@ubuntu:~# mount -t 9p -o trans=virtio shared /mnt
 ```
+
+Or you can put this line to `etc/fstab`
+
+```
+shared /mnt 9p trans=virtio 0 0
+```

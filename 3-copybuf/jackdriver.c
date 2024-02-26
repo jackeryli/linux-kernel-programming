@@ -37,7 +37,7 @@ const struct file_operations fops = {
 
 static int jackdriver_open(struct inode *inode, struct file *filp)
 {
-	pr_info("rootkit: %s\n", __func__);
+	pr_info("jackdriver: %s\n", __func__);
 	return 0;
 }
 
@@ -83,7 +83,7 @@ static ssize_t jackdriver_write(struct file *filp, const char *buf, size_t len, 
 
 static int jackdriver_release(struct inode *inode, struct file *filp)
 {
-	pr_info("rootkit: %s\n", __func__);
+	pr_info("jackdriver: %s\n", __func__);
 	return 0;
 }
 
