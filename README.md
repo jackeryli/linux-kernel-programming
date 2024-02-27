@@ -12,7 +12,7 @@ Follow this [guide](installation.md) to prepare environment.
 ## Part 1: Add new system call and write a shell
 
 - Add new syscall `getcpu`
-- Write a simple shell
+- Write a simple shell and call `getcpu`
 
 ## Part 2: Rootkit
 
