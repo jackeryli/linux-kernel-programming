@@ -12,25 +12,27 @@
 #define EXEC 1
 
 #define MAXARGS 10
-#define NCOMMAND 2
+#define NCOMMAND 3
 #define DELIMITER " \n"
 
 int my_cd(char**);
 int my_exit(char**);
+int getcpu(char**);
 
 /**
  * ref: https://brennan.io/2015/01/16/write-a-shell-in-c
 */
 char *builtin_str[] = {
 	"cd",
-	"exit"
+	"exit",
+	"getcpu"
 };
 
 int (*builtin_func[]) (char**) = {
 	&my_cd,
-	&my_exit
+	&my_exit,
+	&getcpu
 };
-
 
 struct cmd {
 	int type;
@@ -62,6 +64,18 @@ my_exit(char** argv)
 	if(argv[1] != NULL){
 		return EINVAL;
 	}
+	return 0;
+}
+
+int
+getcpu(char** argv)
+{
+	long ret = syscall(452);
+
+	if(ret >= 0)
+		printf("%ld\n", ret);
+	else
+		fprintf(stderr, "shell: error: %s\n", strerror(errno));
 	return 0;
 }
 
