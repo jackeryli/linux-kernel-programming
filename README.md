@@ -26,9 +26,7 @@ Follow this [guide](installation.md) to prepare environment.
 - Use `kmalloc` to allocate memory at kernel
 - Memory should be protected by `mutex` 
 
-## Part 4: procfs
-
-## Part 5: myfs
+## Part 4: myfs
 
 - A simple in-mermoy file system
 
